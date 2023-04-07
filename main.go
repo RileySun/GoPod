@@ -4,19 +4,23 @@ import(
 	"log"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
 )
 
 var fyneApp fyne.App
 var window fyne.Window
+var content *fyne.Container
 
+var menu *Menu
 var list *List
 
 func setup() {
 	fyneApp = app.NewWithID("com.sunshine.gopod")
 	window = fyneApp.NewWindow("Go Pod")
 	
-	
-	list = NewList("cool-people-who-did-cool-stuff")
+	shows := loadShowsFromJSON()
+	menu = NewMenu(shows, changeList)
+	list = NewList(shows[0].Slug)
 	
 	/*
 	//System Tray Notifications (desktop only, no fyne tray for mobile)
@@ -32,7 +36,8 @@ func main() {
 	setup()
 	log.Println("Loading Complete")
 	
-	content := list.Render()
+	
+	content := container.NewBorder(menu.Select, nil, nil, nil, list.Render())
 	
 	window.SetContent(content)
 	
@@ -44,4 +49,10 @@ func main() {
 	window.SetMaster()
 	
 	window.ShowAndRun()
+}
+
+func changeList(newShow string) {
+	list.Items = list.getItems(newShow)
+	content := container.NewBorder(menu.Select, nil, nil, nil, list.Render()) 
+	window.SetContent(content)
 }

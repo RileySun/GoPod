@@ -6,6 +6,7 @@ require (
 	fyne.io/fyne/v2 v2.3.3
 	github.com/RileySun/OmnyGo v0.0.0-20230405123644-c133f1e7740a
 	github.com/flytam/filenamify v1.1.2
+	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 )
 
 require (

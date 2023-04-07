@@ -1,10 +1,14 @@
 package main
 
 import(
+	"io"
 	"os"
 	"log"
 	"errors"
 	"runtime"
+	"net/http"
+	"io/ioutil"
+	"encoding/json"
 	"path/filepath"
 	
 	"github.com/flytam/filenamify"
@@ -48,7 +52,7 @@ func getAppSupportFolder() string {
 }
 
 func checkIfDownloaded(filename string) bool {
-	path := getAppSupportFolder() + "/" + filename + ".mp3"
+	path := getAppSupportFolder() + "/" + filename + ".mp3"	
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
   		return false
 	} else {
@@ -57,9 +61,76 @@ func checkIfDownloaded(filename string) bool {
 }
 
 func makeFileNameSafe(title string) string {
-	filename, err := filenamify.Filenamify(title, filenamify.Options{})
+	filename, err := filenamify.Filenamify(title, filenamify.Options{
+    	Replacement:" -",
+    })
 	if err != nil {
 		log.Println("utils.go - Cannot make safe: " + title)
 	}
 	return filename
+}
+
+func createDirIfNotExist(dir string) {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err = os.MkdirAll(dir, 0755)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
+func downloadToFolder(url, folder, name string) {
+	path := getAppSupportFolder() + "/" + folder
+	createDirIfNotExist(path)
+	
+	newFile := path + "/" + name + ".mp3"
+	out, createErr := os.Create(newFile)
+	if createErr != nil {
+		log.Fatal(createErr)
+	}
+	defer out.Close()
+	
+	
+	resp, downloadErr := http.Get(url)
+	if downloadErr != nil {
+		log.Fatal(downloadErr)
+	}
+	defer resp.Body.Close()
+	
+	_, copyErr := io.Copy(out, resp.Body)
+	if copyErr != nil {
+		log.Fatal(copyErr)
+	}
+}
+
+func deleteFile(folder, name string) {
+	path := getAppSupportFolder() + "/" + folder + "/" + name + ".mp3"
+	deleteErr := os.Remove(path)
+	
+	if deleteErr != nil {
+		log.Fatal(deleteErr)
+	}
+}
+
+func loadShowsFromJSON() []*Show {
+	path := getAppSupportFolder() + "/DATA.sun"
+	
+	//Check if exists
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+  		os.Create(path)
+  		ioutil.WriteFile(path, []byte("[{\"Type\":\"Omny\",\"Name\":\"Behind The Bastards\",\"Slug\":\"behind-the-bastards\"}]"), 0600)
+	}
+	
+	data, readErr := ioutil.ReadFile(path)
+	if readErr != nil {
+		log.Fatal(readErr)
+	}
+	
+	var shows []*Show
+	jsonErr := json.Unmarshal(data, &shows)
+	if jsonErr != nil {
+		log.Fatal(jsonErr)
+	}
+	
+	return shows
 }
