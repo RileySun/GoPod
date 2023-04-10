@@ -11,6 +11,7 @@ import(
 	"encoding/json"
 	"path/filepath"
 	
+	"fyne.io/fyne/v2/storage"
 	"github.com/flytam/filenamify"
 )
 
@@ -26,7 +27,7 @@ func getAppSupportFolder() string {
 			if os.IsNotExist(err) {
 				dirErr := os.Mkdir(saveDir, 0755)
 				if dirErr != nil {
-					panic("settings: log file - " + dirErr.Error())
+					log.Fatal("App Support: log file - " + dirErr.Error())
 				}
 			}
 		case "darwin":			
@@ -35,7 +36,7 @@ func getAppSupportFolder() string {
 			if os.IsNotExist(statErr) {
 				dirErr := os.Mkdir(saveDir, 0755)
 				if dirErr != nil {
-					panic("settings: " + dirErr.Error())
+					log.Fatal("App Support: " + dirErr.Error())
 				}
 			}
 		case "linux":
@@ -44,9 +45,18 @@ func getAppSupportFolder() string {
 			if os.IsNotExist(statErr) {
 				dirErr := os.Mkdir(saveDir, 0755)
 				if dirErr != nil {
-					panic("settings: log file - " + dirErr.Error())
+					log.Fatal("App Support: log file - " + dirErr.Error())
 				}
 			}
+		case "android":
+			saveDir = filepath.Join(homeDir, "Podcasts")
+			_, statErr := os.Stat(saveDir)
+			if os.IsNotExist(statErr) {
+				dirErr := os.Mkdir(saveDir, 0755)
+				if dirErr != nil {
+					log.Fatal("App Support: log file - " + dirErr.Error())
+				}
+			}			
 	}
 	return saveDir
 }
@@ -113,9 +123,28 @@ func deleteFile(folder, name string) {
 }
 
 func loadShowsFromJSON() []*Show {
-	path := getAppSupportFolder() + "/DATA.sun"
+	path := filepath.Join(getAppSupportFolder(), "/DATA.sun")
 	
-	//Check if exists
+	var shows []*Show
+	var data []byte
+	
+	if runtime.GOOS != "android" {
+		data = loadJSON(path)
+	} else {
+		data = loadAndroidJSON()
+		data = []byte("[{\"Type\":\"Omny\",\"Name\":\"Behind The Bastards\",\"Slug\":\"behind-the-bastards\"}]")
+	}
+	
+	jsonErr := json.Unmarshal(data, &shows)
+	if jsonErr != nil {
+		log.Fatal(jsonErr)
+	}
+	
+	return shows
+	
+}
+
+func loadJSON(path string) []byte {
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
   		os.Create(path)
   		ioutil.WriteFile(path, []byte("[{\"Type\":\"Omny\",\"Name\":\"Behind The Bastards\",\"Slug\":\"behind-the-bastards\"}]"), 0600)
@@ -125,12 +154,18 @@ func loadShowsFromJSON() []*Show {
 	if readErr != nil {
 		log.Fatal(readErr)
 	}
+	return data
+}
+
+func loadAndroidJSON() []byte {
+	path := fyneApp.Storage().RootURI().Path() + "/DATA.sun"
+	uri, _ := storage.ParseURI(path)
 	
-	var shows []*Show
-	jsonErr := json.Unmarshal(data, &shows)
-	if jsonErr != nil {
-		log.Fatal(jsonErr)
+	_, readErr := storage.Reader(uri)
+	
+	if readErr != nil {
+		log.Fatal(readErr, " " + path)
 	}
 	
-	return shows
+	return []byte("")
 }
