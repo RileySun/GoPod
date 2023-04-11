@@ -132,7 +132,6 @@ func loadShowsFromJSON() []*Show {
 		data = loadJSON(path)
 	} else {
 		data = loadAndroidJSON()
-		data = []byte("[{\"Type\":\"Omny\",\"Name\":\"Behind The Bastards\",\"Slug\":\"behind-the-bastards\"}]")
 	}
 	
 	jsonErr := json.Unmarshal(data, &shows)
@@ -158,14 +157,29 @@ func loadJSON(path string) []byte {
 }
 
 func loadAndroidJSON() []byte {
+	//Fyne has a special way of handling android files... 
+	
+	//Get APPDATA path
 	path := fyneApp.Storage().RootURI().Path() + "/DATA.sun"
-	uri, _ := storage.ParseURI(path)
 	
-	_, readErr := storage.Reader(uri)
-	
-	if readErr != nil {
-		log.Fatal(readErr, " " + path)
+	//Create URI
+	uri, uriErr := storage.ParseURI("file://" + path)
+	if uriErr != nil {
+		log.Fatal(uriErr)
 	}
 	
-	return []byte("")
+	//Create Fyne Reader
+	r, readerErr := storage.Reader(uri)	
+	if readerErr != nil {
+		log.Fatal(readerErr, " " + path)
+	}
+	
+	//Read data using regular io package
+	data, readErr := io.ReadAll(r)
+	if readErr != nil {
+		log.Fatal(readErr)
+	}
+	
+	//Return read data
+	return data
 }
