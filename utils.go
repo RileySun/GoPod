@@ -61,6 +61,8 @@ func getAppSupportFolder() string {
 	return saveDir
 }
 
+//File Download
+
 func checkIfDownloaded(filename string) bool {
 	path := getAppSupportFolder() + "/" + filename + ".mp3"	
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
@@ -89,7 +91,15 @@ func createDirIfNotExist(dir string) {
 	}
 }
 
-func downloadToFolder(url, folder, name string) {
+func downloadPodcast(url, folder, name string) {
+	if runtime.GOOS != "android" {
+		desktopDownload(url, folder, name)
+	} else {
+		androidDownload(url, folder, name)
+	}
+}
+
+func desktopDownload(url, folder, name string) {
 	path := getAppSupportFolder() + "/" + folder
 	createDirIfNotExist(path)
 	
@@ -113,7 +123,100 @@ func downloadToFolder(url, folder, name string) {
 	}
 }
 
+func androidDownload(url, folder, name string) {
+	folderPath := "/sdcard/Podcasts" + "/" + folder
+	filePath := folderPath + "/" + name
+	
+	//Folder
+	createDirIfNotExist(folderPath)
+	
+	//File
+	file, createErr := os.Create(filePath)
+	if createErr != nil {
+		log.Fatal(createErr)
+	}
+	defer file.Close()
+	
+	/*
+	log.Println("Folder")
+	//Check if Folder Exists
+	folderURI, folderErr := storage.ParseURI("file://" + folderPath)
+	if folderErr != nil {
+		log.Fatal(folderErr)
+	}
+	folderExists, existsErr := storage.Exists(folderURI)
+	if existsErr != nil {
+		log.Fatal(existsErr)
+	}
+	if !folderExists {
+		log.Println("Folder Does Not Exist At: " + folderURI.Path())
+		folderCreateErr := storage.CreateListable(folderURI)
+		if folderCreateErr != nil {
+			log.Fatal(folderCreateErr)
+		}
+		err := os.Mkdir("/sdcard/Podcasts", os.ModePerm)
+		log.Fatal(err)
+	}
+	
+	log.Println("File URI")
+	//Make File URI
+	uri, uriErr := storage.ParseURI("file://" + filePath)
+	if uriErr != nil {
+		log.Fatal(uriErr)
+	}
+	canWrite, canWriteErr := storage.CanWrite(uri)
+	if canWriteErr != nil {
+		log.Fatal(canWriteErr)
+	}
+	if !canWrite {
+		log.Fatal("Can not write to this location: " + uri.Path())
+	}
+	*/
+	
+	log.Println("Download")
+	//Download
+	resp, downloadErr := http.Get(url)
+	if downloadErr != nil {
+		log.Fatal(downloadErr)
+	}
+	defer resp.Body.Close()
+	
+	/*
+	log.Println("Writer")
+	//Make Writer
+	writer, writeErr := storage.Writer(uri)
+	if writeErr != nil {
+		log.Fatal(writeErr)
+	}
+	
+	log.Println("Data")
+	//Get Data & Save
+	data, dataErr := ioutil.ReadAll(resp.Body)
+	if dataErr != nil {
+		log.Fatal(dataErr)
+	}
+	log.Println("Save")
+	_, saveErr := writer.Write(data)
+	if writeErr != nil {
+		log.Fatal(saveErr)
+	}
+	*/
+	
+	_, copyErr := io.Copy(file, resp.Body)
+	if copyErr != nil {
+		log.Fatal(copyErr)
+	}
+}
+
 func deleteFile(folder, name string) {
+	if runtime.GOOS != "android" {
+		desktopDelete(folder, name)
+	} else {
+		androidDelete(folder, name)
+	}
+}
+
+func desktopDelete(folder, name string) {
 	path := getAppSupportFolder() + "/" + folder + "/" + name + ".mp3"
 	deleteErr := os.Remove(path)
 	
@@ -121,6 +224,12 @@ func deleteFile(folder, name string) {
 		log.Fatal(deleteErr)
 	}
 }
+
+func androidDelete(folder, name string) {
+
+}
+
+//Load Shows
 
 func loadShowsFromJSON() []*Show {
 	path := filepath.Join(getAppSupportFolder(), "/DATA.sun")

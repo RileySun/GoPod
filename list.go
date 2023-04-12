@@ -124,7 +124,7 @@ func (l *List) RenderItem() *fyne.Container {
 func (l *List) Download(item *Item, buttons Buttons) {
 	go func() {
 		buttons.Download.Disable()
-		downloadToFolder(item.AudioURL, item.ShowName, item.FileName)
+		downloadPodcast(item.AudioURL, item.ShowName, item.FileName)
 		buttons.Play.Enable()
 		buttons.Delete.Enable()
 	}()
