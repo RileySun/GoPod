@@ -124,43 +124,17 @@ func desktopDownload(url, folder, name string) {
 }
 
 func androidDownload(url, folder, name string) {
-	folderPath := "/sdcard/Podcasts" + "/" + folder
+	//root := fyneApp.Storage().RootURI().String()
+	root := "/sdcard/Podcasts"
+	folderPath := root + "/" + folder
 	filePath := folderPath + "/" + name
 	
-	//Folder
-	createDirIfNotExist(folderPath)
-	
-	//File
-	file, createErr := os.Create(filePath)
-	if createErr != nil {
-		log.Fatal(createErr)
-	}
-	defer file.Close()
+	//createDirIfNotExist(folderPath)
 	
 	/*
-	log.Println("Folder")
-	//Check if Folder Exists
-	folderURI, folderErr := storage.ParseURI("file://" + folderPath)
-	if folderErr != nil {
-		log.Fatal(folderErr)
-	}
-	folderExists, existsErr := storage.Exists(folderURI)
-	if existsErr != nil {
-		log.Fatal(existsErr)
-	}
-	if !folderExists {
-		log.Println("Folder Does Not Exist At: " + folderURI.Path())
-		folderCreateErr := storage.CreateListable(folderURI)
-		if folderCreateErr != nil {
-			log.Fatal(folderCreateErr)
-		}
-		err := os.Mkdir("/sdcard/Podcasts", os.ModePerm)
-		log.Fatal(err)
-	}
-	
 	log.Println("File URI")
 	//Make File URI
-	uri, uriErr := storage.ParseURI("file://" + filePath)
+	uri, uriErr := storage.ParseURI("file://" + filePath + ".mp3")
 	if uriErr != nil {
 		log.Fatal(uriErr)
 	}
@@ -181,13 +155,21 @@ func androidDownload(url, folder, name string) {
 	}
 	defer resp.Body.Close()
 	
+	newFile := filePath + ".mp3"
+	out, createErr := os.Create(newFile)
+	if createErr != nil {
+		log.Fatal(createErr)
+	}
+	defer out.Close()
+	
 	/*
 	log.Println("Writer")
 	//Make Writer
 	writer, writeErr := storage.Writer(uri)
 	if writeErr != nil {
-		log.Fatal(writeErr)
+		log.Fatal(writeErr, uri.Path())
 	}
+	
 	
 	log.Println("Data")
 	//Get Data & Save
@@ -202,10 +184,11 @@ func androidDownload(url, folder, name string) {
 	}
 	*/
 	
-	_, copyErr := io.Copy(file, resp.Body)
+	_, copyErr := io.Copy(out, resp.Body)
 	if copyErr != nil {
 		log.Fatal(copyErr)
 	}
+	
 }
 
 func deleteFile(folder, name string) {
